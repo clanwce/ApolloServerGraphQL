@@ -6,7 +6,7 @@
     "apollo-server": "2.1.0",
     "bcrypt": "3.0.3",
     "graphql": "14.0.2",
-    "jwt": "0.2.0",
+    "jsonwebtoken": "8.4.0",
     "mongodb": "latest"
   },
   "license": "MIT",
