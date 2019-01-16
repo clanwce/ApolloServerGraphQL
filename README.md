@@ -1,2 +1,0 @@
-# ApolloServerGraphQL
-Created with CodeSandbox
