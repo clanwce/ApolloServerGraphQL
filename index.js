@@ -1,8 +1,9 @@
+//DP Demo App GraphQL API w/ Apollo Server & MongoDB
+
 const { ApolloServer, gql } = require("apollo-server");
 const { MongoClient, ObjectId } = require("mongodb");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-// Construct a schema, using GraphQL schema language
 
 let mongo;
 let secrets;
