@@ -29,6 +29,8 @@ async function context(headers) {
     );
     mongo = client.db("clanwce");
   }
+  // headers.authorization =
+  //   "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI1YzNlOGRmYmE3ZGIyZjAwYWViMmFlOTciLCJpYXQiOjE1NDgxNDYxMDF9.CKtuwoh8BhxxA7N-s4m73xWE6NmyDtVsg7wzOKCE4wE";
   currentUser = await getLoginUser(headers.authorization, secrets, mongo);
 
   return {
@@ -60,11 +62,14 @@ const typeDefs = gql`
   type Query {
     currentUser: User
     hello: String
+    deals: [Deal]
+    deal_vote(userId: String!, dealId: String!): Boolean
   }
 
   type Mutation {
     login(email: String!, password: String!): User
     signup(email: String!, password: String!): User
+    deal_vote(deal_id: String!, vote: Boolean!): Boolean
   }
 
   type User {
@@ -72,6 +77,20 @@ const typeDefs = gql`
     email: String
     password: String
     token: String
+  }
+
+  type Deal {
+    _id: String
+    title: String
+    description: String
+    votes: Int
+    voted: Boolean
+  }
+
+  type DealVote {
+    _id: String
+    userId: String
+    dealId: String
   }
 `;
 
@@ -81,7 +100,40 @@ const resolvers = {
     currentUser: (root, args, ctx) => {
       return ctx.currentUser;
     },
-    hello: (root, args, context) => "Hello world!"
+    hello: (root, args, ctx) => "Hello world!",
+    deals: async (root, args, ctx) => {
+      const Deals = await ctx.mongo.collection("deals");
+      const DealVotes = await ctx.mongo.collection("deal_votes");
+      const allDeals = await Deals.find();
+      let deals = await allDeals.toArray();
+
+      for (let index in deals) {
+        deals[index].voted = false;
+        if (ctx.currentUser) {
+          let deal_vote = await DealVotes.findOne({
+            user_id: ctx.currentUser._id + "",
+            deal_id: deals[index]._id + ""
+          });
+          console.log(deal_vote);
+          deals[index].voted = deal_vote ? true : false;
+        }
+        deals[index]._id = deals[index]._id + "";
+      }
+      console.log(deals);
+      return deals;
+    },
+    deal_vote: async (root, { userId, dealId }, ctx) => {
+      const DealVotes = await ctx.mongo.collection("deal_votes");
+      const dealVote = await DealVotes.findOne({
+        user_id: userId,
+        deal_id: dealId
+      });
+      if (dealVote) {
+        return true;
+      } else {
+        return false;
+      }
+    }
   },
   Mutation: {
     login: async (root, { email, password }, ctx) => {
@@ -118,6 +170,27 @@ const resolvers = {
       user.token = jwt.sign({ _id: user._id }, ctx.secrets.JWT_SECRET);
       user._id = user._id + "";
       return user;
+    },
+    deal_vote: async (root, { dealId, vote }, ctx) => {
+      if (!ctx.currentUser) {
+        return false;
+      }
+      const userId = ctx.currentUser._id + ""; //convert to string
+      const DealVotes = await ctx.mongo.collection("deal_votes");
+      const existingVote = await DealVotes.findOne({
+        user_id: userId,
+        deal_id: dealId
+      });
+      if (vote) {
+        if (!existingVote) {
+          await DealVotes.insertOne({ user_id: userId, deal_id: dealId });
+        }
+      } else {
+        if (existingVote) {
+          await DealVotes.remove({ user_id: userId, deal_id: dealId });
+        }
+      }
+      return true;
     }
   }
 };
