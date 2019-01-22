@@ -29,8 +29,8 @@ async function context(headers) {
     );
     mongo = client.db("clanwce");
   }
-  // headers.authorization =
-  //   "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI1YzNlOGRmYmE3ZGIyZjAwYWViMmFlOTciLCJpYXQiOjE1NDgxNDYxMDF9.CKtuwoh8BhxxA7N-s4m73xWE6NmyDtVsg7wzOKCE4wE";
+  headers.authorization =
+    "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI1YzNlOGRmYmE3ZGIyZjAwYWViMmFlOTciLCJpYXQiOjE1NDgxNDYxMDF9.CKtuwoh8BhxxA7N-s4m73xWE6NmyDtVsg7wzOKCE4wE";
   currentUser = await getLoginUser(headers.authorization, secrets, mongo);
 
   return {
@@ -69,7 +69,7 @@ const typeDefs = gql`
   type Mutation {
     login(email: String!, password: String!): User
     signup(email: String!, password: String!): User
-    deal_vote(deal_id: String!, vote: Boolean!): Boolean
+    vote_deal(deal_id: String!, vote: Boolean!): Boolean
   }
 
   type User {
@@ -171,23 +171,23 @@ const resolvers = {
       user._id = user._id + "";
       return user;
     },
-    deal_vote: async (root, { dealId, vote }, ctx) => {
+    vote_deal: async (root, { deal_id, vote }, ctx) => {
       if (!ctx.currentUser) {
         return false;
       }
-      const userId = ctx.currentUser._id + ""; //convert to string
+      const user_id = ctx.currentUser._id + ""; //convert to string
       const DealVotes = await ctx.mongo.collection("deal_votes");
       const existingVote = await DealVotes.findOne({
-        user_id: userId,
-        deal_id: dealId
+        user_id,
+        deal_id
       });
       if (vote) {
         if (!existingVote) {
-          await DealVotes.insertOne({ user_id: userId, deal_id: dealId });
+          await DealVotes.insertOne({ user_id, deal_id });
         }
       } else {
         if (existingVote) {
-          await DealVotes.remove({ user_id: userId, deal_id: dealId });
+          await DealVotes.remove({ user_id, deal_id });
         }
       }
       return true;
